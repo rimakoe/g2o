@@ -13,8 +13,3 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 RUN python3 -m pip install --upgrade pip setuptools wheel mypy numpy flags
-
-WORKDIR /home/workspace/g2o
-
-#ENV PYTHONPATH="/usr/local/lib/python3.10/dist-packages/g2opy:${PYTHONPATH}"
-#ENTRYPOINT ["./entrypoint.bash"]

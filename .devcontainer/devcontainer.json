@@ -6,6 +6,7 @@
 	"service": "g2o",
 	"workspaceFolder": "/home/workspace/g2o",
 	"shutdownAction": "stopCompose",
+	"postCreateCommand": "./entrypoint.bash",
 	"customizations": {
 		"vscode": {
 			"extensions": [

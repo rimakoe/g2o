@@ -6,41 +6,31 @@ import glob
 import subprocess
 from wheel.bdist_wheel import bdist_wheel
 
-class CustomBdistWheel(bdist_wheel):
-    def run(self):
-        print("Running custom bdist_wheel command...")
-        # You can add pre-processing logic here before the wheel is built
-        super().run()  # Calls the original bdist_wheel command
-        print("Finished building the wheel!")
+BUILD_DIR = os.path.join(os.getcwd(), "build", "lib")
+PACKAGE_DIR = os.path.join(os.getcwd(), "build", "python", "lib","g2opy")
 
 class CustomBuildCommand(build):
     def run(self):
-        build_filepaths = glob.glob(os.path.join(os.getcwd(), "build", "lib", "g2opy*.so"))  # Linux/macOS
+        build_filepaths = glob.glob(os.path.join(BUILD_DIR, "g2opy*.so"))  # Find the python binding .so file
         if build_filepaths:
             build_filepath= build_filepaths[0]
         else:
-            print("No g2opy shared lib found!")
-        dest_filepath = os.path.join(os.getcwd(), "build", "python", "lib","g2opy", os.path.basename(build_filepath))
-        os.makedirs(os.path.dirname(dest_filepath), exist_ok=True)
-        shutil.copy(build_filepath, dest_filepath)
-        print(f"Copied G2O binding: {build_filepath} -> {dest_filepath}")
-
-        with open(os.path.join(os.getcwd(), "build", "python", "lib","g2opy", "__init__.py"), "w") as f:
-            f.write("from .g2opy import *\n")
-        
-        with open(os.path.join(os.getcwd(), "build", "python", "lib","g2opy", "py.typed"), "w") as f:
-            f.write("\n")
-
-        stub_output = os.path.join(os.getcwd(), "build", "python", "lib","g2opy")
-        os.makedirs(stub_output, exist_ok=True)
-        subprocess.run(["stubgen","-m", "g2opy", "-o", "."], cwd=stub_output, check=True)
-        print(f"Generated type hints in: {stub_output}")
+            print("No g2o python bindings found in " + BUILD_DIR)
+            return
+        print("Found python bindings: " + build_filepath)
+        package_filepath = os.path.join(PACKAGE_DIR, os.path.basename(build_filepath))
+        os.makedirs(PACKAGE_DIR, exist_ok=True)
+        shutil.copy(build_filepath, package_filepath)
+        print(f"Copied g2o python bindings: {build_filepath} -> {package_filepath}")
+        with open(os.path.join(PACKAGE_DIR, "__init__.py"), "w") as f:
+            f.write("from .g2opy import *\n") # Create this for no double import in the code        
+        with open(os.path.join(PACKAGE_DIR, "py.typed"), "w") as f:
+            f.write("\n") # Create this for mypy to find the .pyi 
+        subprocess.run(["stubgen","-m", "g2opy", "-o", "."], cwd=PACKAGE_DIR, check=True)
+        print(f"Generated type hints in: {PACKAGE_DIR}")
         super().run()
 
-
-
 if __name__=="__main__":
-    
     setup(
         name="g2opy",
         version="1.0.0",
@@ -51,5 +41,5 @@ if __name__=="__main__":
         install_requires=[
             "mypy",
         ],
-        cmdclass = {'build': CustomBuildCommand, 'bdist_wheel': CustomBdistWheel},
+        cmdclass = {'build': CustomBuildCommand},
     )
