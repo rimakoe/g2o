@@ -1,0 +1,26 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-dockerfile
+{
+	"name": "g2o",
+	"dockerComposeFile": "../docker/docker-compose.yaml",
+	"service": "g2o",
+	"workspaceFolder": "/home/workspace/g2o",
+	"shutdownAction": "stopCompose",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-vscode.cpptools",
+				"waderyan.gitblame",
+				"ms-vscode.cpptools-themes",
+				"twxs.cmake",
+				"donjayamanne.python-extension-pack",
+				"ms-iot.vscode-ros",
+				"mhutchie.git-graph",
+				"arturock.gitstash",
+				"bierner.markdown-mermaid",
+				"marus25.cortex-debug",
+				"tomoki1207.pdf"
+			]
+		}
+	}
+}

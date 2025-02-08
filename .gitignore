@@ -1,4 +1,4 @@
 \build*
 \.vs
-\.vscode
 \.cache
+*.egg-info
