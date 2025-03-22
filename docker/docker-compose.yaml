@@ -1,15 +1,19 @@
 services:
-
-  g2o:
-    image: g2o:latest
-    pull_policy: missing
-    container_name: g2o
+  g2o_deps:
+    image: g2o/deps:latest
+    container_name: g2o_deps
     stdin_open: true
     tty: true
-    privileged: true
     build:
       context: ../
       dockerfile: docker/Dockerfile
+      target: deps
+    environment:
+      DISPLAY: $DISPLAY
+
+  g2o_dev:
+    image: g2o/dev:latest
+    container_name: g2o_dev
     volumes:
       - type: bind
         source: ../
@@ -18,7 +22,15 @@ services:
         source: /tmp/.X11-unix
         target: /tmp/.X11-unix
     network_mode: host
-    pid: "host"
-    ipc: "host"
     environment:
       DISPLAY: $DISPLAY
+    extends:
+      service: g2o_deps
+
+  g2o:
+    image: g2o:latest
+    build:
+      target: install
+    container_name: g2o
+    extends:
+      service: g2o_deps

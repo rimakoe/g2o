@@ -3,10 +3,13 @@
 {
 	"name": "g2o",
 	"dockerComposeFile": "../docker/docker-compose.yaml",
-	"service": "g2o",
+	"service": "g2o_dev",
 	"workspaceFolder": "/home/workspace/g2o",
 	"shutdownAction": "stopCompose",
-	"postCreateCommand": "./entrypoint.bash",
+	"runServices": [
+		"g2o_dev"
+	],
+	// "postCreateCommand": "./entrypoint.bash",
 	"customizations": {
 		"vscode": {
 			"extensions": [
