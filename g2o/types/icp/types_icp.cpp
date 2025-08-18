@@ -73,13 +73,26 @@ void EdgeVVGicp::computeError() {
   // get vp1 point into vp0 frame
   // could be more efficient if we computed this transform just once
   Vector3 p1;
-
   p1 = vp1->estimate() * measurement().pos1;
   p1 = vp0->estimate().inverse() * p1;
 
+  Vector3 n1;
+  n1 = vp1->estimate().rotation().matrix() * measurement().normal1;
+  n1 = vp0->estimate().inverse().rotation().matrix() * n1;
+
+  Vector3 cache1(1.0, 0.0, 0.0);
+  cache1 = vp1->estimate().rotation().matrix() * cache1;
+
+  Vector3 t1 = cache1.cross(n1).normalized();
+  Vector3 t2 = t1.cross(n1).normalized();
+
+  Vector3 p2 = p1 + t1 * 1.0;
+  Vector3 p3 = p1 + t2 * 1.0;
   // get their difference
   // this is simple Euclidean distance, for now
-  error_ = p1 - measurement().pos0;
+  error_(0) = measurement().normal0.dot(p1 - measurement().pos0);
+  error_(1) = measurement().normal0.dot(p2 - measurement().pos0);
+  error_(2) = measurement().normal0.dot(p3 - measurement().pos0);
 
   if (!pl_pl) return;
 
@@ -91,40 +104,43 @@ void EdgeVVGicp::computeError() {
   information() = (cov0 + transform * cov1 * transform.transpose()).inverse();
 }
 
-// Jacobian
-// [ -R0'*R1 | R0 * dRdx/ddx * 0p1 ]
-// [  R0'*R1 | R0 * dR'dx/ddx * 0p1 ]
-
 #ifdef GICP_ANALYTIC_JACOBIANS
 
-// jacobian defined as:
-//    f(T0,T1) =  dR0.inv() * T0.inv() * (T1 * dR1 * p1 + dt1) - dt0
-//    df/dx0 = [-I, d[dR0.inv()]/dq0 * T01 * p1]
-//    df/dx1 = [R0, T01 * d[dR1]/dq1 * p1]
 void EdgeVVGicp::linearizeOplus() {
   VertexSE3* vp0 = vertexXnRaw<0>();
   VertexSE3* vp1 = vertexXnRaw<1>();
 
-  // topLeftCorner<3,3>() is the rotation matrix
-  const Vector3& p1 = measurement().pos1;
+  Vector3 p1;
+  p1 = vp1->estimate() * measurement().pos1;
+  p1 = vp0->estimate().inverse() * p1;
 
-  // this could be more efficient
-  if (!vp0->fixed()) {
-    const Vector3 p1t = vp0->estimate().inverse() * vp1->estimate() * p1;
-    jacobianOplusXi_.block<3, 3>(0, 0) = -Matrix3::Identity();
-    jacobianOplusXi_.block<3, 1>(0, 3) = kDRidx * p1t;
-    jacobianOplusXi_.block<3, 1>(0, 4) = kDRidy * p1t;
-    jacobianOplusXi_.block<3, 1>(0, 5) = kDRidz * p1t;
-  }
+  Vector3 n1;
+  n1 = vp1->estimate().rotation().matrix() * measurement().normal1;
+  n1 = vp0->estimate().inverse().rotation().matrix() * n1;
+
+  Vector3 cache1(1.0, 0.0, 0.0);
+  cache1 = vp1->estimate().rotation().matrix() * cache1;
+
+  Vector3 t1 = cache1.cross(n1).normalized();
+  Vector3 t2 = t1.cross(n1).normalized();
+
+  Vector3 p2 = p1 + t1 * 1.0;
+  Vector3 p3 = p1 + t2 * 1.0;
+
+  Eigen::Vector3d n = measurement().normal0;
+  n.normalize();
+
+  Eigen::Vector3d pts[3] = {p1, p2, p3};
 
   if (!vp1->fixed()) {
-    const Matrix3 R0T =
-        vp0->estimate().matrix().topLeftCorner<3, 3>().transpose() *
-        vp1->estimate().matrix().topLeftCorner<3, 3>();
-    jacobianOplusXj_.block<3, 3>(0, 0) = R0T;
-    jacobianOplusXj_.block<3, 1>(0, 3) = R0T * kDRidx.transpose() * p1;
-    jacobianOplusXj_.block<3, 1>(0, 4) = R0T * kDRidy.transpose() * p1;
-    jacobianOplusXj_.block<3, 1>(0, 5) = R0T * kDRidz.transpose() * p1;
+    for (int i = 0; i < 3; ++i) {
+      Eigen::Matrix3d skew;
+      skew << 0, -pts[i].z(), pts[i].y(), pts[i].z(), 0, -pts[i].x(),
+          -pts[i].y(), pts[i].x(), 0;
+
+      jacobianOplusXj_.block<1, 3>(i, 3) = -n.transpose() * skew;
+      jacobianOplusXj_.block<1, 3>(i, 0) = n.transpose();
+    }
   }
 }
 #endif
